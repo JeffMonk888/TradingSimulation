@@ -1,0 +1,32 @@
+log_returns = np.log(prices / prices.shift(1)).dropna()
+
+prices - closing price at time = t
+
+prices.shift(1) - closing price at time = t - 1
+
+
+rolling_entropy = log_returns.rolling(window=window).apply(
+        lambda x: entropy(np.histogram(x, bins=10, density=True)[0]), raw=False
+    )
+
+rolling window: 10
+10 prior data point
+
+Shannon Entropy:
+H(P)= −∑ p(x_i) logp(xi)
+
+Hypothisis:
+Shannon Entropy is used as a secondary checker which is used whether the algorithm decision on the signal is any good with the other indicators
+
+Threshold Entropy - E_thres:
+At the moment is the the mean entropy value.
+E_t - current entropy value
+
+E_thres < E_t - strong signal
+E_thres > E_t - weak signal
+
+-----
+There is a strong correlation I believe between the entropy value and the turning of the market. 
+Proves:
+https://docs.google.com/document/d/1pufG1lDg9PuELSNAn5ljYlwvEpfWCgT8BE66ilzAPJo/edit?usp=sharing
+

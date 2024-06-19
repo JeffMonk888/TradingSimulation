@@ -1,0 +1,17 @@
+Key Use:
+This is use to see the direction of the market. 
+Prior to this, the model was not able to tell the direction. Even though the market did "well" when it is bullish. It was not able to identify that it was in a bearish time. 
+Therefore, making losing trades. Those should have be short selling trades
+
+How it works:
+Calculate the linear regression model on a rolling window of the closing prices and computes the PMCC at each date.
+Then compare the PMCC (the threshold at the moment is determined by hand. This determines how risking the trades are)
+
+*Atm we are only doing buys - there is no short selling for simplicity
+
+Problem:
+At the moment with PMCC even though PMCC > 0, the market can be conslidating all points that are flat is a 1 correlation
+
+https://docs.google.com/document/d/1pufG1lDg9PuELSNAn5ljYlwvEpfWCgT8BE66ilzAPJo/edit?usp=sharing
+
+

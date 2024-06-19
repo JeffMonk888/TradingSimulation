@@ -1,0 +1,29 @@
+Normal Distribution:
+This is use to double confirm.
+
+With this mode we use the log return to evaluate the result:
+1. log_returns = np.log(prices / prices.shift(1)).dropna()
+
+prices - closing price at time = t
+
+prices.shift(1) - closing price at time = t - 1
+
+2. Calculating the rolling mean + standard deviation of the log log_returns (In our case, I have set it as window = 50)
+
+3. Setting Upper and Lower Bounds
+
+I experiment with mean +/- 2 * the standard deviation but that did not really work (Alongside with the Shannon Entropy).
+
+I believe some where between +/- 1-1.5 standard deviation is best (need prove)
+
+Atm: mean +/- 1 * standard deviation 
+
+Signal Generating: 
+If log_t < Lower Bound:
+    Buy signal
+Else log_t > Upper Bound:
+    Sell Signal
+
+**Note this is not including the other signals to be true
+
+

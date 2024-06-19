@@ -1,0 +1,16 @@
+List of different Variables that can be changed:
+General:
+Criticl Region of the r value
+window for all of the indicators
+
+Buy signal:
+Entropy_Threshold multiple 
+Linear Regression Gradient Threshold
+LowerBound of the Normal Distribution Value
+
+Sell Signal:
+Entropy_Threshold multiple 
+Linear Regression Gradient Threshold
+UpperBound of the Normal Distribution Value
+
+
