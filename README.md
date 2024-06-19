@@ -6,3 +6,6 @@ This used yfiance API to retreive data
 
 Problem to fix:
 At downward trend and the algorithm continue to buy.
+
+How I am thinking fixing it:
+Using a random generator. Generate the value for each parameter. Then see which one has the outcome. Back test again.
