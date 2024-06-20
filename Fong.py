@@ -58,7 +58,7 @@ class TradingStrategy:
         )
         return rolling_entropy
     
-    def Linear_Regression(self, window=300):
+    def Linear_Regression(self, window=200):
         self.data['Predicted'] = np.nan
         self.data['PMCC'] = np.nan
         
@@ -82,19 +82,40 @@ class TradingStrategy:
         threshold_pmcc = 0.113 #5% significant level
         lastest_buy_pmcc= 0
         for i in range(1, len(self.data)):
+            conditions_met_sell = 0
+            conditions_met_buy = 0 
             pmcc = self.data['PMCC'].iloc[i]
             
             if abs(pmcc) <= threshold_pmcc:
                 continue
+            
+            #Add a weighted value to the different indicators
+            # Conditions for Buy Signal
+            if pmcc > 0.2:
+                conditions_met_buy += 1
+            if self.data['LogReturn'].iloc[i] <= self.data['LowerBound'].iloc[i-1]:
+                conditions_met_buy += 1
+            if self.data['Entropy'].iloc[i] <= threshold_entropy * 0.95:
+                conditions_met_buy += 1
 
-            if pmcc > 0.2 and self.data['Predicted'].iloc[i] < self.data['Close'].iloc[i] and (self.data['LogReturn'].iloc[i] <= (self.data['LowerBound'].iloc[i-1])) and self.data['Entropy'].iloc[i] <= (threshold_entropy * 0.95):
-                if self.data['SMA200'].iloc[i] < self.data['Close'].iloc[i]:
-                    self.data.at[self.data.index[i], 'Signal'] = 1  # Buy signal
-                    lastest_buy_pmcc = i
-            elif self.data['Predicted'].iloc[i] >= self.data['Close'].iloc[i] and self.data['LogReturn'].iloc[i] >= self.data['UpperBound'].iloc[i-1] and self.data['Entropy'].iloc[i] >= (threshold_entropy * 1.05):
-                if pmcc < self.data['PMCC'].iloc[lastest_buy_pmcc]:
-                    if self.data['SMA200'].iloc[i] > self.data['Close'].iloc[i]:
-                        self.data.at[self.data.index[i], 'Signal'] = -1  # Sell signal
+            # Execute Buy Signal
+            if conditions_met_buy >= 2 and self.data['SMA200'].iloc[i] < self.data['Close'].iloc[i] and self.data['Predicted'].iloc[i] < self.data['Close'].iloc[i]:
+                self.data.at[self.data.index[i], 'Signal'] = 1  # Buy signal
+                lastest_buy_pmcc = i
+
+            # Conditions for Sell Signal
+            if self.data['Predicted'].iloc[i] >= self.data['Close'].iloc[i]:
+                conditions_met_sell += 1
+            if self.data['LogReturn'].iloc[i] >= self.data['UpperBound'].iloc[i-1]:
+                conditions_met_sell += 1
+            if self.data['Entropy'].iloc[i] >= threshold_entropy * 1.05:
+                conditions_met_sell += 1
+            if lastest_buy_pmcc is not None and pmcc < self.data['PMCC'].iloc[lastest_buy_pmcc]:
+                conditions_met_sell += 1
+
+            # Execute Sell Signal
+            if conditions_met_sell >= 3 and self.data['SMA200'].iloc[i] > self.data['Close'].iloc[i]:
+                self.data.at[self.data.index[i], 'Signal'] = -1  # Sell signal
 
 
     def simulate_trading(self, initial_balance=10000, share_size=500):
