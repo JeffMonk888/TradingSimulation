@@ -12,6 +12,7 @@ Then compare the PMCC (the threshold at the moment is determined by hand. This d
 Problem:
 At the moment with PMCC even though PMCC > 0, the market can be conslidating all points that are flat is a 1 correlation
 
+PMCC Solved by increasing the window. 
 https://docs.google.com/document/d/1pufG1lDg9PuELSNAn5ljYlwvEpfWCgT8BE66ilzAPJo/edit?usp=sharing
 
 

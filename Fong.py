@@ -13,6 +13,8 @@ class TradingStrategy:
         self.interval = interval
         self.chunk_size_days = chunk_size_days
         self.data = self.fetch_data_in_chunks()
+    
+
         self.calculate_indicators()
         self.generate_signals()
         
@@ -40,7 +42,7 @@ class TradingStrategy:
         
         self.data.dropna(inplace=True)
 
-    def Normal_Distribution(self, window=100):
+    def Normal_Distribution(self, window=50):
         self.data['LogReturn'] = np.log(self.data['Close'] / self.data['Close'].shift(1))
         
         self.data['RollingMean'] = self.data['LogReturn'].rolling(window=window).mean()
@@ -49,14 +51,14 @@ class TradingStrategy:
         self.data['UpperBound'] = self.data['RollingMean'] + (self.data['RollingStd'] * 1.2)
         self.data['LowerBound'] = self.data['RollingMean'] - (self.data['RollingStd'] * 1.2)
 
-    def Shannon_Entropy(self, window=50):
+    def Shannon_Entropy(self, window=100):
         log_returns = np.log(self.data['Close'] / self.data['Close'].shift(1)).dropna()
         rolling_entropy = log_returns.rolling(window=window).apply(
             lambda x: entropy(np.histogram(x, bins=10, density=True)[0]), raw=False
         )
         return rolling_entropy
     
-    def Linear_Regression(self, window=60):
+    def Linear_Regression(self, window=300):
         self.data['Predicted'] = np.nan
         self.data['PMCC'] = np.nan
         
@@ -66,27 +68,36 @@ class TradingStrategy:
             gradient, intercept, r_value, p_value, std_err = linregress(x, y)
             self.data.loc[self.data.index[i], 'Predicted'] = intercept + gradient * window
             self.data.loc[self.data.index[i], 'PMCC'] = r_value
-            self.data.loc[self.data.index[i], 'Gradient'] = gradient
-
+            
+    # def Rolling_Gradient_Regression(self, window = 100):
+    #      for i in range(window + 1, len(self.data)):
+    #         y = self.data['Gradient'].iloc[i-window - 1:i - 1].values
+    #         x = np.arange(window)
+    #         gradient, intercept, r_value, p_value, std_err = linregress(x, y)
+    #         self.data.loc[self.data.index[i], 'RGPMCC'] = r_value #Rolling Gradient PMCC
+    
     def generate_signals(self):
         self.data['Signal'] = 0
         threshold_entropy = self.data['Entropy'].mean()
-        threshold_gradient = 0.0002
+        threshold_pmcc = 0.113 #5% significant level
+        lastest_buy_pmcc= 0
         for i in range(1, len(self.data)):
             pmcc = self.data['PMCC'].iloc[i]
             
-            #5% significant level
-            if abs(pmcc) <= 0.2353:
+            if abs(pmcc) <= threshold_pmcc:
                 continue
 
-            if pmcc >= 0.5 and (self.data['LogReturn'].iloc[i] <= (self.data['LowerBound'].iloc[i-1])) and self.data['Entropy'].iloc[i] <= (threshold_entropy * 1.05):
-                if self.data['Gradient'].iloc[i] >= threshold_gradient:
+            if pmcc > 0.2 and self.data['Predicted'].iloc[i] < self.data['Close'].iloc[i] and (self.data['LogReturn'].iloc[i] <= (self.data['LowerBound'].iloc[i-1])) and self.data['Entropy'].iloc[i] <= (threshold_entropy * 0.95):
+                if self.data['SMA200'].iloc[i] < self.data['Close'].iloc[i]:
                     self.data.at[self.data.index[i], 'Signal'] = 1  # Buy signal
-            elif pmcc <= 0 and self.data['LogReturn'].iloc[i] >= self.data['UpperBound'].iloc[i-1] and self.data['Entropy'].iloc[i] >= (threshold_entropy):
-                if self.data['Gradient'].iloc[i] <= 0:
-                    self.data.at[self.data.index[i], 'Signal'] = -1  # Sell signal
+                    lastest_buy_pmcc = i
+            elif self.data['Predicted'].iloc[i] >= self.data['Close'].iloc[i] and self.data['LogReturn'].iloc[i] >= self.data['UpperBound'].iloc[i-1] and self.data['Entropy'].iloc[i] >= (threshold_entropy * 1.05):
+                if pmcc < self.data['PMCC'].iloc[lastest_buy_pmcc]:
+                    if self.data['SMA200'].iloc[i] > self.data['Close'].iloc[i]:
+                        self.data.at[self.data.index[i], 'Signal'] = -1  # Sell signal
 
-    def simulate_trading(self, initial_balance=10000, share_size=10):
+
+    def simulate_trading(self, initial_balance=10000, share_size=500):
         balance = initial_balance
         position = 0
         trades = []
@@ -107,7 +118,7 @@ class TradingStrategy:
         return final_balance, trades, buy_sell_pairs
 
     def plot_results(self, final_balance, trades, buy_sell_pairs):
-        fig, (ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(6, 1, figsize=(6, 6), sharex=True)
+        fig, (ax1, ax5, ax2, ax3, ax4) = plt.subplots(5, 1, figsize=(6, 6), sharex=True)
 
         # Plot market prices
         ax1.plot(self.data['Close'], label='Close Price')
@@ -213,28 +224,10 @@ class TradingStrategy:
                 ax5.axvline(x=sell_date, color='r', linestyle='--', linewidth=0.8)
         ax5.legend()
         ax5.grid()
-
-        ax6.plot(self.data['Gradient'], label='Gradient')
-        ax6.set_title('Gradient Values')
-        ax6.set_xlabel('Date')
-        ax6.set_ylabel('Gradient')
-        for i, (buy, sell) in enumerate(buy_sell_pairs):
-            buy_date, buy_action, buy_shares, buy_price, buy_balance = buy
-            sell_date, sell_action, sell_shares, sell_price, sell_balance = sell
-            if i == 0:
-                ax6.axvline(x=buy_date, color='g', linestyle='--', linewidth=0.8, label='Buy Signal')
-                ax6.axvline(x=sell_date, color='r', linestyle='--', linewidth=0.8, label='Sell Signal')
-            else:
-                ax6.axvline(x=buy_date, color='g', linestyle='--', linewidth=0.8)
-                ax6.axvline(x=sell_date, color='r', linestyle='--', linewidth=0.8)
-        ax6.legend()
-        ax6.grid()
-
-
         plt.show()
 
 if __name__ == "__main__":
-    strategy = TradingStrategy(ticker='EURUSD=X', start_date='2023-06-17', end_date='2024-06-18')
+    strategy = TradingStrategy(ticker='EURUSD=X', start_date='2023-05-17', end_date='2024-06-18', interval = "1h")
     final_balance, trades, buy_sell_pairs = strategy.simulate_trading()
 
     # Calculate average holding time
